@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use float_cmp::approx_eq;
+use num::Rational64;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum OrderType {
     Limit,
     Market,
@@ -10,42 +10,27 @@ pub enum OrderType {
     TrailingStop,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum OrderStatus {
+    Pending,
+    Cancelled,
+    Filled,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Position {
     pub symbol: String,
     pub qty: i64,
-    pub basis: f64,
+    pub basis: Rational64,
 }
 
-impl PartialEq for Position {
-    fn eq(&self, other: &Self) -> bool {
-        self.symbol.eq(&other.symbol)
-            && self.qty == other.qty
-            && approx_eq!(f64, self.basis, other.basis, ulps = 2)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Order {
     pub symbol: String,
     pub qty: i64,
-    pub price: Option<f64>,
+    pub price: Option<Rational64>,
     pub order_type: OrderType,
-}
-
-impl PartialEq for Order {
-    fn eq(&self, other: &Self) -> bool {
-        let price_eq = if self.price.is_some() && other.price.is_some() {
-            self.price.unwrap() == other.price.unwrap()
-        } else {
-            self.price.is_none() && other.price.is_none()
-        };
-
-        self.symbol.eq(&other.symbol)
-            && self.qty == other.qty
-            && price_eq
-            && self.order_type == other.order_type
-    }
+    pub order_status: OrderStatus,
 }
 
 pub trait Broker {
@@ -74,5 +59,22 @@ impl Broker for DummyBroker {
 
     fn get_orders(&self) -> &[Order] {
         &self.orders
+    }
+}
+
+impl DummyBroker {
+    pub fn update(&mut self) {
+        let borrow = &mut self.orders;
+        for order in borrow {
+            if order.order_status == OrderStatus::Pending {
+                order.order_status = OrderStatus::Filled;
+                let p = Position {
+                    symbol: order.symbol.clone(),
+                    qty: order.qty,
+                    basis: order.price.unwrap_or(Rational64::new_raw(420, 100)),
+                };
+                self.positions.insert(p);
+            }
+        }
     }
 }
