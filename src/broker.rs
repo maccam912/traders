@@ -71,7 +71,7 @@ impl DummyBroker {
                 let p = Position {
                     symbol: order.symbol.clone(),
                     qty: order.qty,
-                    basis: order.price.unwrap_or(Rational64::new_raw(420, 100)),
+                    basis: order.price.unwrap_or_else(|| Rational64::new_raw(420, 100)),
                 };
                 self.positions.insert(p);
             }

@@ -1,8 +1,16 @@
 pub mod broker;
+pub mod engine;
 
 #[cfg(test)]
 mod tests {
-    use crate::broker::{Broker, DummyBroker, Order, Position};
+    use chrono::Utc;
+    use num::Rational64;
+    use tokio::sync::mpsc::channel;
+
+    use crate::{
+        broker::{Broker, DummyBroker, Order, Position},
+        engine::{Bar, Engine, Event},
+    };
 
     #[test]
     fn it_works() {
@@ -35,5 +43,28 @@ mod tests {
 
         broker.update();
         assert_eq!(broker.get_positions().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_event_loop() {
+        let (tx, rx) = channel(999);
+        let (mut engine, mut rx) = Engine::new(rx);
+        let one = Rational64::new_raw(1, 1);
+        let bar = Bar {
+            t: Utc::now(),
+            o: one,
+            h: one,
+            l: one,
+            c: one,
+            v: one,
+        };
+        let bbar = Event::NewBar(bar);
+        tokio::spawn(async move {
+            engine.run().await;
+        });
+
+        let _ = tx.send(bbar).await;
+        let message = rx.recv().await;
+        assert_eq!(message, Some(Event::Message("Success!".to_string())));
     }
 }
