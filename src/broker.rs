@@ -36,7 +36,7 @@ pub struct Order {
 pub trait Broker {
     fn new() -> Self;
 
-    fn get_cash(&self) -> num::Rational64;
+    fn get_cash(&self) -> Rational64;
     fn get_positions(&self) -> &HashSet<Position>;
     fn get_orders(&self) -> &[Order];
     fn new_order(&mut self, o: Order);

@@ -1,5 +1,6 @@
 pub mod broker;
 pub mod engine;
+pub use num::Rational64;
 
 #[cfg(test)]
 mod tests {
