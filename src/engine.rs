@@ -13,9 +13,6 @@ pub struct Bar {
     pub v: Rational64,
 }
 
-unsafe impl Send for Bar {}
-unsafe impl Sync for Bar {}
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum Event {
     NewBar(Bar),
@@ -26,9 +23,6 @@ pub struct Engine {
     irx: Receiver<Event>,
     itx: Sender<Event>,
 }
-
-unsafe impl Send for Engine {}
-unsafe impl Sync for Engine {}
 
 impl Engine {
     pub fn new(irx: Receiver<Event>) -> (Engine, Receiver<Event>) {

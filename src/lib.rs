@@ -8,13 +8,20 @@ mod tests {
     use tokio::sync::mpsc::channel;
 
     use crate::{
-        broker::{Broker, DummyBroker, Order, Position},
+        broker::{Broker, DummyBroker, Order, OrderStatus, OrderType, Position},
         engine::{Bar, Engine, Event},
     };
 
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn test_broker_cash() {
+        let mut broker = DummyBroker::new();
+        broker.cash = Rational64::new(10000, 1);
+        assert_eq!(broker.get_cash(), Rational64::new(10000, 1));
     }
 
     #[test]
@@ -66,5 +73,40 @@ mod tests {
         let _ = tx.send(bbar).await;
         let message = rx.recv().await;
         assert_eq!(message, Some(Event::Message("Success!".to_string())));
+    }
+
+    #[test]
+    fn test_broker_new_market_order() {
+        let mut broker = DummyBroker::new();
+        broker.new_market_order("TSLA".to_string(), 100);
+        let order1 = broker.get_orders().get(0).unwrap();
+        assert_eq!(order1.symbol, "TSLA".to_string());
+        assert_eq!(order1.qty, 100);
+        assert_eq!(order1.price, None);
+        assert_eq!(order1.order_type, OrderType::Market);
+        assert_eq!(order1.order_status, OrderStatus::Pending);
+    }
+
+    #[test]
+    fn test_broker_new_limit_order() {
+        let mut broker = DummyBroker::new();
+        broker.new_limit_order("TSLA".to_string(), 100, Rational64::new(420, 100));
+        let order1 = broker.get_orders().get(0).unwrap();
+        assert_eq!(order1.symbol, "TSLA".to_string());
+        assert_eq!(order1.qty, 100);
+        assert_eq!(order1.price, Some(Rational64::new(420, 100)));
+        assert_eq!(order1.order_type, OrderType::Limit);
+        assert_eq!(order1.order_status, OrderStatus::Pending);
+    }
+
+    #[test]
+    fn test_broker_pos_decreases() {
+        let mut broker = DummyBroker::new();
+        broker.cash = Rational64::new(1000, 1);
+        broker.new_market_order("TSLA".to_string(), 100);
+        broker.update();
+
+        // 1000-420 = 580
+        assert_eq!(broker.get_cash(), Rational64::new(580, 1));
     }
 }
